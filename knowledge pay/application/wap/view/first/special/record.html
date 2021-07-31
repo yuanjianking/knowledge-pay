@@ -1,0 +1,122 @@
+{extend name="public/container"}
+{block name="title"}学习记录{/block}
+{block name="head_top"}
+<script src="/wap/first/zsff/js/scroll.js"></script>
+<script src="/wap/first/zsff/js/navbarscroll.js"></script>
+<style>
+    .goodsClass .header {
+        height: 1.0rem
+    }
+</style>
+{/block}
+{block name="content"}
+<div class="goodsClass" id="app" v-cloak="">
+    <div class="header">
+        <div class="search acea-row row-center-wrapper">
+            <div class="pictrue">{if $homeLogo}<img src="{$homeLogo}">{else}<img src="/wap/first/zsff/images/crmeb.png">{/if}
+            </div>
+            <div class="input acea-row row-middle">
+                <img src="/wap/first/zsff/images/search.png">
+                <form method="post" @submit.prevent="goSearch">
+                    <input type="text" placeholder="输入课程名称" v-model="search">
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="public_list goodList">
+        <a class="item acea-row row-between-wrapper" v-for="item in specialList" :href="getDetails(item.id)">
+            <div class="pictrue">
+                <img :src="item.image">
+            </div>
+            <div class="text">
+                <div class="title acea-row row-middle">
+                    <div class="label acea-row row-center-wrapper" v-text="item.subject_name"></div>
+                    <div class="name line1" v-text="item.title"></div>
+                </div>
+                <div class="labelList">
+                    <span class="labelItem" v-for="label in item.label">{{label}}</span>
+                </div>
+                <div class="money" v-if="item.money > 0">￥{{item.money}}</div>
+                <div class="money" v-else>免费</div>
+            </div>
+        </a>
+    </div>
+
+    <p class="loading-line" style="background-color: #ffffff" v-cloak="">
+        <span v-show="loading == true" class="fa fa-spinner loadingpic" style="font-size: 0.4rem"></span>
+        <span v-text="loadTitle">加载更多</span>
+    </p>
+</div>
+{/block}
+{block name='foot'}
+<script>
+    require(['vue', 'helper', 'store'], function (Vue, $h, app) {
+        new Vue({
+            el: '#app',
+            data: {
+                specialList: [],
+                search: '',
+                loadTitle: '',
+                loading: false,
+                limit: 10,
+                page: 1,
+            },
+            mounted: function () {
+                this.getSpecialList();
+            },
+            methods: {
+                goSearch: function () {
+                    this.loadend = false;
+                    this.page = 1;
+                    this.$set(this, 'specialList', []);
+                    this.getSpecialList();
+                },
+                getDetails: function (id) {
+                    return $h.U({
+                        c: 'special',
+                        a: 'details',
+                        q: {id: id}
+                    });
+                },
+                getSpecialList: function () {
+                    var that = this;
+                    if (that.loadend) return;
+                    if (that.loading) return;
+                    that.loading = true;
+                    that.loadTitle = '';
+                    app.baseGet($h.U({
+                        c: 'special',
+                        a: 'get_special_list',
+                        q: {
+                            subject_id: 0,
+                            search: that.search,
+                            page: that.page,
+                            limit: that.limit,
+                            type: 1
+                        }
+                    }), function (res) {
+                        var list = res.data.data;
+                        var specialList = $h.SplitArray(list, that.specialList);
+                        that.loading = false;
+                        that.page++;
+                        that.loadend = list.length < that.limit;
+                        that.loadTitle = that.loadend ? '我是有底线的' : '上拉加载更多';
+                        that.$set(that, 'specialList', specialList);
+                        that.EventUtil();
+                    }, function (res) {
+                        that.loading = false;
+                        this.loadTitle = '加载更多';
+                    });
+                },
+                EventUtil: function () {
+                    this.$nextTick(function () {
+                        $h.EventUtil.listenTouchDirection(document, function () {
+                            this.loading == false && this.getSpecialList();
+                        }.bind(this), false);
+                    })
+                }
+            }
+        });
+    })
+</script>
+{/block}
